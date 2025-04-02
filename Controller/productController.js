@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import Product from "../models/productModel.js";
+import { count } from 'console';
 
   const getProducts = async (req, res) => {
     const product = await Product.find({})
@@ -69,6 +70,44 @@ import Product from "../models/productModel.js";
       messege: 'Now array is clear'
     })
   }
+  const getCategoryStats = async (req, res) =>{
+    const stats = await Product.aggregate([
+      {
+        $group: {
+          _id: '$category',
+          numProducts: {$sum: 1},
+          avgPrice: { $avg: '$price'},
+          minPrice: { $min: '$price'},
+          maxPrice: { $max: '$price'},
+        },
+      },
+      { $sort: { avgPrice: -1 }}
+    ])
+  };
+
+ const getPriceStats = async (req, res) => {
+  try{
+    const priceRange = await Product.aggregate([
+      {
+        $bucket: {
+          groupBy: '$price',
+          boundaries: [0, 100, 200, 300],
+          default: 'Other',
+          output: {
+            count: {$sum:1},
+            max: { $max: '$price'},
+            min: { $min: '$price'},
+            avg: { $avg: '$price'},
+          }
+        }
+      }
+    ])
+
+    res.json(priceRange);
+  } catch(error) {
+    res.status(500).json({messege: error.message})
+  }
+ }
 
 
-export{getProducts, crateProducts, editProducts, deleteProducts, buyProducts, deleteAllProducts};
+export{getProducts, crateProducts, editProducts, deleteProducts, buyProducts, deleteAllProducts, getPriceStats, getCategoryStats};
