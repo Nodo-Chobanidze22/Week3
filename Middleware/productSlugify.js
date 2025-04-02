@@ -1,3 +1,4 @@
+
 import slugify from 'slugify';
 
 function productSlugify(req, res, next){

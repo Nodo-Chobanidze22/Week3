@@ -2,8 +2,9 @@ import express from 'express';
 import morgan from 'morgan';
 import userRouter from './Router/userRouter.js';
 import productRouter from './Router/productRouter.js';
-import dotenv from 'dotenv';
 import { rateLimit } from 'express-rate-limit'
+import dotenv from 'dotenv';
+dotenv.config({path: './config.env'});
 
 const app = express();
 
@@ -14,12 +15,19 @@ const limiter = rateLimit({
     legacyHeaders: false,
 });
 
+
+
 app.use(limiter); 
 
-dotenv.config({path: './config.env'});
 app.use(express.json());
+if(process.env.NODE_ENV === "development"){
+   app.use(morgan("dev"));
+   console.log(process.env.NODE_ENV)
+}
+if(process.env.NODE_ENV === "production"){
+   console.log(process.env.NODE_ENV)
+ }
 
-app.use(morgan("dev"));
 
 const isMaintenance = false;
 
@@ -35,7 +43,4 @@ app.use((req, res, next) => {
 app.use("/products", productRouter);
 app.use("/users", userRouter);
 
-
-app.listen(process.env.PORT, () => {
-    console.log("Server Listening 3000 Port")
-});
+export default app;

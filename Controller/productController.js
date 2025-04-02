@@ -1,75 +1,70 @@
-import fs from "fs";
-import { stringify } from "querystring";
+import mongoose from 'mongoose';
+import Product from "../models/productModel.js";
 
- const data = fs.readFileSync('./data/products.json', 'utf8')
-
-  const getProducts =(req, res) => {
-    const products = JSON.parse(data);
-    res.json({
-      messege: products
-    })
+  const getProducts = async (req, res) => {
+    const product = await Product.find({})
+    res.json({product})
   };
 
   const crateProducts = (req, res) => {
-    const products = JSON.parse(data);
-    const newProduct = {...req.body, id: Date.now()};
-  
-    if(!newProduct.name || !newProduct.price){
-       return res.status(406).json({
-        messege: 'name and price is required!'
-      })
+    const product = new Product({...req.body, id: Date.now()});
+    product.save();
+    res.status(201).json(product);
+  };
+  const editProducts = async (req, res) => {
+    const product = await Product.findOneAndUpdate({id: Number(req.params.id)}, req.body, {new: true})
+    res.json(product);
+  };
+  const deleteProducts = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const numericId = Number(id);
+
+        if (isNaN(numericId)) {
+            return res.status(400).json({ error: 'Invalid Product ID' });
+        }
+
+        const result = await Product.archivedProduct({ id: numericId });
+
+        if (result.matchedCount === 0) {
+            return res.status(404).json({ error: 'Product not found' });
+        }
+
+        res.status(200).json({ message: 'Product archived successfully' });
+    } catch (error) {
+        console.error("Server error:", error);  
+        res.status(500).json({ error: 'Internal Server Error', details: error.message });
     }
-    
-  const findItem = products.find(item => item.name == newProduct.name);
-    if (findItem) { 
-      return res.status(406).json({
-        message: 'Product already exists!'
+};
+  const buyProducts = async (req, res) => {
+    try {
+      const productId = Number(req.params.id);
+      const product = await Product.findOne({id: productId});
+      
+      if (!product) {
+          return res.status(404).json({ message: "Product not found" });
+      }
+
+      if (product.stock <= 0) {
+          return res.status(400).json({ message: "Product is out of stock" });
+      }
+
+      const updatedProduct = await Product.findOneAndUpdate(
+          {id: productId}, 
+          { stock: product.stock - 1 }, 
+          { new: true }
+      );
+      
+      res.json({
+          message: "You bought that product",
+          data: updatedProduct
       });
-    }
-  
-    products.push(newProduct);
-    fs.copyFileSync("./data/products.json", `./data/products_backup_${newProduct.id}.json`)
-    fs.writeFileSync("./data/products.json", JSON.stringify(products));
-    res.status(201).json(newProduct);
+  } catch (error) {
+      res.status(500).json({ message: "Server error", error: error.message });
+  }
   };
-  const editProducts = (req, res) => {
-    const products = JSON.parse(data);
-    const productsIndex = products.findIndex(products => products.id === parseInt(req.params.id));
-    const newProduct = {...products[productsIndex], ...req.body}
-    products[productsIndex] = newProduct;
-    fs.writeFileSync("./data/products.json", JSON.stringify(products));
-    res.status(201).json(newProduct);
-  
-  };
-  const deleteProducts = (req, res) => {
-    const products = JSON.parse(data);
-    const newProducts = products.filter(product => product.id !== parseInt(req.params.id));
-    fs.writeFileSync("./data/products.json", JSON.stringify(newProducts));
-    res.send("Product Deleted");
-  };
-  const buyProducts = (req, res) => {
-       const productId = parseInt(req.params.id)
-         
-       const products = JSON.parse(data);
-       const productsIndex = products.findIndex(products => products.id === productId);
-       if(products[productsIndex].stock < 1){
-        return res.status(406).json({
-          messege: 'Stock is 0'
-        })
-       }
-       products[productsIndex] = {...products[productsIndex], stock: products[productsIndex].stock -1,};
-  
-       
-       fs.writeFileSync("./data/products.json", JSON.stringify(products));
-  
-       res.json({
-        massage: 'You buy that product',
-        data: products[productsIndex]
-       })
-  };
-  const deleteAllProducts = (req, res) => {
-    const NewArray = []
-    fs.writeFileSync("./data/products.json", JSON.stringify(NewArray));
+  const deleteAllProducts = async (req, res) => {
+    const product = await Product.deleteMany();
     res.json({
       messege: 'Now array is clear'
     })
