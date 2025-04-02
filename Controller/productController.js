@@ -100,6 +100,20 @@ import { count } from 'console';
             avg: { $avg: '$price'},
           }
         }
+      },
+      {
+        $addFields: {
+          range: {
+            $switch: {
+              branches: [
+                {case: {$lt: ['$_id', 100]}, then: '0-100'},
+                {case: {$lt: ['$_id', 200]}, then: '0-200'},
+                {case: {$lt: ['$_id', 300]}, then: '0-300'},
+              ],
+              default: '300+',
+            }
+          }
+        }
       }
     ])
 
